@@ -1,0 +1,51 @@
+<%= render "spree/checkout/payment/gateway", payment_method: payment_method %>
+
+<script src="https://checkout.razorpay.com/v1/razorpay.js"></script>
+
+<script>
+  razorpaySuccessResponseHandler = function (response) {
+    var token = response.razorpay_payment_id;
+    console.log(token);
+    console.log(response);
+    Spree.razorpayPaymentMethod.append("<input type='hidden' class='razorpayPayment' name='payment_source[<%= payment_method.id %>][gateway_payment_profile_id]' value='" + token + "'/>");
+    Spree.razorpayPaymentMethod.parents("form").trigger('submit');
+  };
+
+  razorpayErrorResponseHandler = function (response) {
+    $('#razorpayError').html(response.error.description).show();
+  };
+</script>
+
+<script>
+  Spree.razorpayPaymentMethod = $('#payment_method_' + <%= payment_method.id %>);
+  $(document).ready(function() {
+    Spree.razorpayPaymentMethod.prepend("<div id='razorpayError' class='errorExplanation alert alert-danger' style='display:none'></div>");
+    return $('#checkout_form_payment [data-hook=buttons]').click(function() {
+      if (Spree.razorpayPaymentMethod.is(':visible')) {
+        expiration = $('.cardExpiry:visible').payment('cardExpiryVal');
+        params = $.extend({
+          "card[name]" : $('#name_on_card_<%= payment_method.id %>:visible').val(),
+          'card[number]' : $('.cardNumber:visible').val(),
+          'card[cvv]': $('.cardCode:visible').val(),
+          'card[expiry_month]': expiration.month || 0,
+          'card[expiry_year]': expiration.year || 0
+        }, Spree.razorpayAdditionalInfo);
+        razorpay = new Razorpay({key: '<%= payment_method.preferences[:key_id] %>'});
+        razorpay.createPayment(params)
+          .on('payment.success', razorpaySuccessResponseHandler)
+          .on('payment.error', razorpayErrorResponseHandler);
+        return false;
+      }
+    });
+  });
+</script>
+
+<%- if @order.has_checkout_step?('address') -%>
+  <script>
+    Spree.razorpayAdditionalInfo = {
+      email: "<%= current_spree_user.email %>",
+      contact: "<%= @order.bill_address.phone %>",
+      amount: "<%= @order.display_total.cents %>"
+    }
+  </script>
+<%- end -%>
