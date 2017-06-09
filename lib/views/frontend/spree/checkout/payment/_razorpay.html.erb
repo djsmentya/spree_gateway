@@ -45,7 +45,8 @@
     Spree.razorpayAdditionalInfo = {
       email: "<%= current_spree_user.email %>",
       contact: "<%= @order.bill_address.phone %>",
-      amount: "<%= @order.display_total.cents %>"
+      amount: "<%= @order.display_total.cents %>",
+      currency: "<%= @order.currency %>"
     }
   </script>
 <%- end -%>
